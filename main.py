@@ -11,8 +11,33 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 import numpy as np
 
+
 class FacialImageCNN(nn.Module):
-    # def __init__(self):
+    #initialize Main Model: kernel = 3x3, convolution layers 2
+    def __init__(self, dropout_rate=0.5, weight_decay=1e-5):
+        super(FacialImageCNN, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, stride=1, padding=1)
+        self.relu = nn.ReLU()
+        self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1)
+        self.fc1 = nn.Linear(32 * 56 * 56, 128)
+        self.dropout = nn.Dropout(dropout_rate)
+        self.fc2 = nn.Linear(128, 4)
+        self.weight_decay = weight_decay
+
+    def forward(self, x):
+        x = self.relu(self.conv1(x))
+        x = self.maxpool(x)
+        x = self.relu(self.conv2(x))
+        x = self.maxpool(x)
+        x = x.view(-1, 32 * 56 * 56)
+        x = self.relu(self.fc1(x))
+        x = self.dropout(x)
+        x = self.fc2(x)
+        return x
+
+    #initialize Variant 1: kernel = 3x3, convolution layers = 3
+    # def __init__(self, dropout_rate=0.5, weight_decay=1e-5):
     #     super(FacialImageCNN, self).__init__()
     #     self.conv1 = nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, stride=1, padding=1)
     #     self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1)
@@ -20,9 +45,9 @@ class FacialImageCNN(nn.Module):
     #     self.relu = nn.ReLU()
     #     self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
     #     self.fc1 = nn.Linear(64 * 28 * 28, 128)
-    #
-    #     #self.fc1 = nn.Linear(64 * 56 * 56, 128)
+    #     self.dropout = nn.Dropout(dropout_rate)
     #     self.fc2 = nn.Linear(128, 4)
+    #     self.weight_decay = weight_decay
     #
     # def forward(self, x):
     #     x = self.relu(self.conv1(x))
@@ -32,20 +57,22 @@ class FacialImageCNN(nn.Module):
     #     x = self.relu(self.conv3(x))
     #     x = self.maxpool(x)
     #     x = x.view(-1, 64 * 28 * 28)  # Corrected reshape size
-    #
-    #     #x = x.view(-1, 64 * 56 * 56)
     #     x = self.relu(self.fc1(x))
+    #     x = self.dropout(x)
     #     x = self.fc2(x)
     #     return x
 
-    # def __init__(self):
+    # initialize Variant 2: kernel=7x7, convolution layers = 2
+    # def __init__(self, dropout_rate=0.5, weight_decay=1e-4):
     #     super(FacialImageCNN, self).__init__()
-    #     self.conv1 = nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, stride=1, padding=1)
+    #     self.conv1 = nn.Conv2d(in_channels=3, out_channels=16, kernel_size=7, stride=1, padding=3)
     #     self.relu = nn.ReLU()
     #     self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
-    #     self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1)
+    #     self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=7, stride=1, padding=3)
     #     self.fc1 = nn.Linear(32 * 56 * 56, 128)
     #     self.fc2 = nn.Linear(128, 4)
+    #     self.dropout = nn.Dropout(dropout_rate)
+    #     self.weight_decay = weight_decay
     #
     # def forward(self, x):
     #     x = self.relu(self.conv1(x))
@@ -54,27 +81,9 @@ class FacialImageCNN(nn.Module):
     #     x = self.maxpool(x)
     #     x = x.view(-1, 32 * 56 * 56)
     #     x = self.relu(self.fc1(x))
+    #     x = self.dropout(x)
     #     x = self.fc2(x)
     #     return x
-
-    def __init__(self):
-        super(FacialImageCNN, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=3, out_channels=16, kernel_size=7, stride=1, padding=3)
-        self.relu = nn.ReLU()
-        self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=7, stride=1, padding=3)
-        self.fc1 = nn.Linear(32 * 56 * 56, 128)
-        self.fc2 = nn.Linear(128, 4)
-
-    def forward(self, x):
-        x = self.relu(self.conv1(x))
-        x = self.maxpool(x)
-        x = self.relu(self.conv2(x))
-        x = self.maxpool(x)
-        x = x.view(-1, 32 * 56 * 56)
-        x = self.relu(self.fc1(x))
-        x = self.fc2(x)
-        return x
 
     def train_model(self, train_loader, num_epochs=30):
         criterion = nn.CrossEntropyLoss()
@@ -83,14 +92,14 @@ class FacialImageCNN(nn.Module):
         for epoch in range(num_epochs):
             self.train()
             for images, labels in train_loader:
-               # print("Input shape:", images.shape)
+                # print("Input shape:", images.shape)
                 optimizer.zero_grad()
                 outputs = self(images)
-                #print("Output shape:", outputs.shape)
+                # print("Output shape:", outputs.shape)
                 loss = criterion(outputs, labels)
                 loss.backward()
                 optimizer.step()
-            print(f'Epoch {epoch+1}/{num_epochs}, Loss: {loss.item()}')
+            print(f'Epoch {epoch + 1}/{num_epochs}, Loss: {loss.item()}')
 
     def save_model(self, path):
         torch.save(self.state_dict(), path)
@@ -100,19 +109,14 @@ class FacialImageCNN(nn.Module):
         self.eval()
 
     def inference(self, image_path):
-        # Load the image
         image = Image.open(image_path)
-
-        # Convert grayscale image to RGB
         image = image.convert('RGB')
 
-        # Apply transformations
         transform = transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
         ])
 
-        # Preprocess the image and add a batch dimension
         image_tensor = transform(image).unsqueeze(0)
         output = self(image_tensor)
         predicted_class = torch.argmax(output, dim=1).item()
@@ -120,7 +124,6 @@ class FacialImageCNN(nn.Module):
 
 
 def split_dataset(dataset_path, train_ratio=0.7, val_ratio=0.15, test_ratio=0.15, random_state=42):
-    # Create directories for train, val, and test sets
     train_dir = '../Education-MindA.I.lytics/train'
     val_dir = '../Education-MindA.I.lytics/val'
     test_dir = '../Education-MindA.I.lytics/test'
@@ -129,12 +132,6 @@ def split_dataset(dataset_path, train_ratio=0.7, val_ratio=0.15, test_ratio=0.15
     os.makedirs(val_dir, exist_ok=True)
     os.makedirs(test_dir, exist_ok=True)
 
-    # List all image files
-    image_files = [os.path.join(dataset_path, cls, file) for cls in os.listdir(dataset_path)
-                   if os.path.isdir(os.path.join(dataset_path, cls))
-                   for file in os.listdir(os.path.join(dataset_path, cls))
-                   if not file.startswith('.')]
-
     train_files = []
     val_files = []
     test_files = []
@@ -142,11 +139,12 @@ def split_dataset(dataset_path, train_ratio=0.7, val_ratio=0.15, test_ratio=0.15
     for cls in os.listdir(dataset_path):
         cls_files = [os.path.join(dataset_path, cls, file) for file in os.listdir(os.path.join(dataset_path, cls))]
 
-        # Split into training, validation, and test sets
-        train_val_cls_files, test_cls_files = train_test_split(cls_files, test_size=test_ratio, random_state=random_state)
-        train_cls_files, val_cls_files = train_test_split(train_val_cls_files, test_size=val_ratio / (train_ratio + val_ratio), random_state=random_state)
+        train_val_cls_files, test_cls_files = train_test_split(cls_files, test_size=test_ratio,
+                                                               random_state=random_state)
+        train_cls_files, val_cls_files = train_test_split(train_val_cls_files,
+                                                          test_size=val_ratio / (train_ratio + val_ratio),
+                                                          random_state=random_state)
 
-        # Move files to respective directories
         for file in train_cls_files:
             new_path = os.path.join(train_dir, cls, os.path.basename(file))
             os.makedirs(os.path.dirname(new_path), exist_ok=True)
@@ -164,6 +162,7 @@ def split_dataset(dataset_path, train_ratio=0.7, val_ratio=0.15, test_ratio=0.15
             test_files.append(new_path)
 
     return train_files, val_files, test_files
+
 
 def evaluate_model(model, data_loader, classes):
     model.eval()
@@ -185,7 +184,7 @@ def evaluate_model(model, data_loader, classes):
     f1_macro = f1_score(y_true, y_pred, average='macro')
     f1_micro = f1_score(y_true, y_pred, average='micro')
 
-    #plot_confusion_matrix(cm, classes, normalize=True)
+    plot_confusion_matrix(cm, classes, normalize=True)
 
     return {
         'confusion_matrix': cm,
@@ -199,14 +198,8 @@ def evaluate_model(model, data_loader, classes):
     }
 
 
-
-
-
 def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix', cmap=plt.cm.Blues):
-    """
-    This function prints and plots the confusion matrix.
-    Normalization can be applied by setting `normalize=True`.
-    """
+    #set normalize = True to create a normalized confusion matrix
     if normalize:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
         print("Normalized confusion matrix")
@@ -234,20 +227,20 @@ def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix'
     plt.tight_layout()
     plt.show()
 
+
 if __name__ == "__main__":
     dataset_path = 'Dataset'
     classes = ['Angry', 'Focused', 'Neutral', 'Surprised']
-    #
-    # # create train, val, and test files
-    # #train_files, val_files, test_files = split_dataset(dataset_path)
-    #
+
+    # create train, val, and test files
+    # train_files, val_files, test_files = split_dataset(dataset_path)
 
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
     ])
 
-    # Create DataLoader objects for train, val, and test sets
+    #create DataLoader objects for train, val, and test sets
     train_dataset = datasets.ImageFolder('train', transform=transform)
     val_dataset = datasets.ImageFolder('val', transform=transform)
     test_dataset = datasets.ImageFolder('test', transform=transform)
@@ -255,22 +248,22 @@ if __name__ == "__main__":
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
-    #
-    # # Initialize and train the model
+
+    #initialize and train the model
     # model = FacialImageCNN()
     # model.train_model(train_loader)
     # model.save_model('model_layers2_kernel7x7_v2')
 
-    # Load the model for evaluation
+    #load the model for evaluation
     loaded_model = FacialImageCNN()
     loaded_model.load_model('model_layers2_kernel7x7')
 
-    # Evaluate the loaded model on train, val, and test sets
+    #evaluate the loaded model on train, val, and test sets
     train_metrics = evaluate_model(loaded_model, train_loader, classes)
     val_metrics = evaluate_model(loaded_model, val_loader, classes)
     test_metrics = evaluate_model(loaded_model, test_loader, classes)
 
-    # Display or save the confusion matrices and metrics
+    #display or save the confusion matrices and metrics
     print("Train Confusion Matrix:")
     print(train_metrics['confusion_matrix'])
     print("Train Accuracy:", train_metrics['accuracy'])
