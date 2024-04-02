@@ -57,24 +57,24 @@ class FacialImageCNN(nn.Module):
     #     x = self.fc2(x)
     #     return x
 
-    # def __init__(self):
-    #     super(FacialImageCNN, self).__init__()
-    #     self.conv1 = nn.Conv2d(in_channels=3, out_channels=16, kernel_size=7, stride=1, padding=3)
-    #     self.relu = nn.ReLU()
-    #     self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
-    #     self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=7, stride=1, padding=3)
-    #     self.fc1 = nn.Linear(32 * 56 * 56, 128)
-    #     self.fc2 = nn.Linear(128, 4)
-    #
-    # def forward(self, x):
-    #     x = self.relu(self.conv1(x))
-    #     x = self.maxpool(x)
-    #     x = self.relu(self.conv2(x))
-    #     x = self.maxpool(x)
-    #     x = x.view(-1, 32 * 56 * 56)
-    #     x = self.relu(self.fc1(x))
-    #     x = self.fc2(x)
-    #     return x
+    def __init__(self):
+        super(FacialImageCNN, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=16, kernel_size=7, stride=1, padding=3)
+        self.relu = nn.ReLU()
+        self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=7, stride=1, padding=3)
+        self.fc1 = nn.Linear(32 * 56 * 56, 128)
+        self.fc2 = nn.Linear(128, 4)
+
+    def forward(self, x):
+        x = self.relu(self.conv1(x))
+        x = self.maxpool(x)
+        x = self.relu(self.conv2(x))
+        x = self.maxpool(x)
+        x = x.view(-1, 32 * 56 * 56)
+        x = self.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
 
     def train_model(self, train_loader, num_epochs=30):
         criterion = nn.CrossEntropyLoss()
@@ -178,14 +178,29 @@ def evaluate_model(model, data_loader, classes):
 
     cm = confusion_matrix(y_true, y_pred)
     accuracy = accuracy_score(y_true, y_pred)
-    precision = precision_score(y_true, y_pred, average='macro')
-    recall = recall_score(y_true, y_pred, average='macro')
-    f1 = f1_score(y_true, y_pred, average='macro')
+    precision_macro = precision_score(y_true, y_pred, average='macro')
+    precision_micro = precision_score(y_true, y_pred, average='micro')
+    recall_macro = recall_score(y_true, y_pred, average='macro')
+    recall_micro = recall_score(y_true, y_pred, average='micro')
+    f1_macro = f1_score(y_true, y_pred, average='macro')
+    f1_micro = f1_score(y_true, y_pred, average='micro')
 
-    plot_confusion_matrix(cm, classes, normalize=True)
+    #plot_confusion_matrix(cm, classes, normalize=True)
+
+    return {
+        'confusion_matrix': cm,
+        'accuracy': accuracy,
+        'precision_macro': precision_macro,
+        'precision_micro': precision_micro,
+        'recall_macro': recall_macro,
+        'recall_micro': recall_micro,
+        'f1_macro': f1_macro,
+        'f1_micro': f1_micro
+    }
 
 
-    return cm, accuracy, precision, recall, f1
+
+
 
 def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix', cmap=plt.cm.Blues):
     """
@@ -219,14 +234,13 @@ def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix'
     plt.tight_layout()
     plt.show()
 
-
 if __name__ == "__main__":
     dataset_path = 'Dataset'
     classes = ['Angry', 'Focused', 'Neutral', 'Surprised']
-
-    # create train, val, and test files
-    #train_files, val_files, test_files = split_dataset(dataset_path)
-
+    #
+    # # create train, val, and test files
+    # #train_files, val_files, test_files = split_dataset(dataset_path)
+    #
 
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
@@ -241,40 +255,48 @@ if __name__ == "__main__":
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
-
-    # Initialize and train the model
-    model = FacialImageCNN()
-    model.train_model(train_loader)
-    model.save_model('model_layers2_kernel7x7_v2')
+    #
+    # # Initialize and train the model
+    # model = FacialImageCNN()
+    # model.train_model(train_loader)
+    # model.save_model('model_layers2_kernel7x7_v2')
 
     # Load the model for evaluation
     loaded_model = FacialImageCNN()
-    loaded_model.load_model('model_layers2_kernel7x7_v2')
+    loaded_model.load_model('model_layers2_kernel7x7')
 
     # Evaluate the loaded model on train, val, and test sets
-    train_cm, train_accuracy, train_precision, train_recall, train_f1 = evaluate_model(loaded_model, train_loader, classes)
-    val_cm, val_accuracy, val_precision, val_recall, val_f1 = evaluate_model(loaded_model, val_loader, classes)
-    test_cm, test_accuracy, test_precision, test_recall, test_f1 = evaluate_model(loaded_model, test_loader, classes)
-
+    train_metrics = evaluate_model(loaded_model, train_loader, classes)
+    val_metrics = evaluate_model(loaded_model, val_loader, classes)
+    test_metrics = evaluate_model(loaded_model, test_loader, classes)
 
     # Display or save the confusion matrices and metrics
     print("Train Confusion Matrix:")
-    print(train_cm)
-    print("Train Accuracy:", train_accuracy)
-    print("Train Precision:", train_precision)
-    print("Train Recall:", train_recall)
-    print("Train F1-score:", train_f1)
+    print(train_metrics['confusion_matrix'])
+    print("Train Accuracy:", train_metrics['accuracy'])
+    print("Train Precision (Macro):", train_metrics['precision_macro'])
+    print("Train Precision (Micro):", train_metrics['precision_micro'])
+    print("Train Recall (Macro):", train_metrics['recall_macro'])
+    print("Train Recall (Micro):", train_metrics['recall_micro'])
+    print("Train F1-score (Macro):", train_metrics['f1_macro'])
+    print("Train F1-score (Micro):", train_metrics['f1_micro'])
 
     print("Validation Confusion Matrix:")
-    print(val_cm)
-    print("Validation Accuracy:", val_accuracy)
-    print("Validation Precision:", val_precision)
-    print("Validation Recall:", val_recall)
-    print("Validation F1-score:", val_f1)
+    print(val_metrics['confusion_matrix'])
+    print("Validation Accuracy:", val_metrics['accuracy'])
+    print("Validation Precision (Macro):", val_metrics['precision_macro'])
+    print("Validation Precision (Micro):", val_metrics['precision_micro'])
+    print("Validation Recall (Macro):", val_metrics['recall_macro'])
+    print("Validation Recall (Micro):", val_metrics['recall_micro'])
+    print("Validation F1-score (Macro):", val_metrics['f1_macro'])
+    print("Validation F1-score (Micro):", val_metrics['f1_micro'])
 
     print("Test Confusion Matrix:")
-    print(test_cm)
-    print("Test Accuracy:", test_accuracy)
-    print("Test Precision:", test_precision)
-    print("Test Recall:", test_recall)
-    print("Test F1-score:", test_f1)
+    print(test_metrics['confusion_matrix'])
+    print("Test Accuracy:", test_metrics['accuracy'])
+    print("Test Precision (Macro):", test_metrics['precision_macro'])
+    print("Test Precision (Micro):", test_metrics['precision_micro'])
+    print("Test Recall (Macro):", test_metrics['recall_macro'])
+    print("Test Recall (Micro):", test_metrics['recall_micro'])
+    print("Test F1-score (Macro):", test_metrics['f1_macro'])
+    print("Test F1-score (Micro):", test_metrics['f1_micro'])
