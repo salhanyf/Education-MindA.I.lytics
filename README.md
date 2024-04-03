@@ -20,3 +20,9 @@ This archive should include the following items: <br>
 02 - README.txt file: general description of the submission including team members information and IDs. <br>
 03 - Team_AK_17_Expectations-of-Originality file: a signed expectation of originality form for each team members. <br>
 04 - Team_AK_17_Part2-report file: Part 2 report of this project. <br>
+
+
+Steps to run code: <br>
+1. to train a model, use the right intialization and forward method in FacialImageCNN module. For eg, if you would like to train a model with 2 convolution layers, and a kernel size of 3x3, then use the appropriate init and forward methods, commenting the rest. Then create an instance of the class, and use the train_model function. Ensure that you have specified DataLoaders for the train_loader parameters and # of epochs for 'epochs' parameter. You may save the model after training using the 'save_model' command, specifiying the directory for it to be saved.
+2. To load a model, use the 'load model' parameter, specifying the the path to the model you would like to load.
+3. To evaluate a model, use the 'evaluate_model' function, specifying the loaded model, the data loaders, and classes as input parameters.
