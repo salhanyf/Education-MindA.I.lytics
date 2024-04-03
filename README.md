@@ -23,6 +23,7 @@ This archive should include the following items: <br>
 
 
 Steps to run code: <br>
-1. to train a model, use the right intialization and forward method in FacialImageCNN module. For eg, if you would like to train a model with 2 convolution layers, and a kernel size of 3x3, then use the appropriate init and forward methods, commenting the rest. Then create an instance of the class, and use the train_model function. Ensure that you have specified DataLoaders for the train_loader parameters and # of epochs for 'epochs' parameter. You may save the model after training using the 'save_model' command, specifiying the directory for it to be saved.
-2. To load a model, use the 'load model' parameter, specifying the the path to the model you would like to load.
-3. To evaluate a model, use the 'evaluate_model' function, specifying the loaded model, the data loaders, and classes as input parameters.
+1. to create training, validation, and testing datasets from your raw data, use the split_dataset function, specifying the path to your raw dataset, the train ration, val ratio, test ratio and the random_state input parameters. 
+2. to train a model, use the right intialization and forward method in FacialImageCNN module. For eg, if you would like to train a model with 2 convolution layers, and a kernel size of 3x3, then use the appropriate init and forward methods, commenting the rest. Then create an instance of the class, and use the train_model function. Ensure that you have specified DataLoaders for the train_loader parameters and # of epochs for 'epochs' parameter. You may save the model after training using the 'save_model' command, specifiying the directory for it to be saved.
+3. To load a model, use the 'load model' parameter, specifying the the path to the model you would like to load.
+4. To evaluate a model, use the 'evaluate_model' function, specifying the loaded model, the data loaders, and classes as input parameters.
