@@ -2,9 +2,9 @@
 COMP 472 Artificial Intelligence <br>
 By Group AK_17 <br>
 
-Farah Salhany - 40074803
-Aleksandr Vinokhodov - 40034162
-Athiru Pathiraja - 40181100
+Farah Salhany <br>
+Aleksandr Vinokhodov <br>
+Athiru Pathiraja <br>
 
 Project repository
 https://github.com/salhanyf/Education-MindA.I.lytics
