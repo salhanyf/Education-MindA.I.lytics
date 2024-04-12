@@ -158,7 +158,7 @@ if __name__ == "__main__":
     # model.save_model('model_layers2_kernel7x7_v2')
 
     # #load the model for evaluation
-    # loaded_model = FacialImageCNN()
+    # loaded_model = MainModel()
     # loaded_model.load_model('model_layers2_kernel3x3')
     #
     # loaded_model.inference('test/Angry/images - 2020-11-06T001050.259_face.png', classes)
