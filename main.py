@@ -5,11 +5,13 @@ import torch.nn as nn
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
-from PIL import Image
-import os
+
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 import numpy as np
+from sklearn.model_selection import KFold
+from sklearn.metrics import precision_recall_fscore_support, accuracy_score
+import os
 from main_model import MainModel
 from variant1 import Variant1
 from variant2 import Variant2
@@ -75,7 +77,7 @@ def evaluate_model(model, data_loader, classes):
     f1_macro = f1_score(y_true, y_pred, average='macro')
     f1_micro = f1_score(y_true, y_pred, average='micro')
 
-    plot_confusion_matrix(cm, classes, normalize=True)
+    #plot_confusion_matrix(cm, classes, normalize=True)
 
     print("Confusion Matrix:")
     print(cm)
@@ -86,8 +88,6 @@ def evaluate_model(model, data_loader, classes):
     print("Recall (Micro):", recall_micro)
     print("F1-score (Macro):", f1_macro)
     print("F1-score (Micro):", f1_micro)
-
-
 
     return {
         'confusion_matrix': cm,
@@ -131,8 +131,64 @@ def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix'
     plt.show()
 
 
+def k_fold(dataset_loader, num_epochs=10, k_folds=10, batch_size=32):
+
+    kf = KFold(n_splits=k_folds, shuffle=True)
+
+    total_accuracy = 0
+    total_macro_precision = 0
+    total_macro_recall = 0
+    total_macro_f1_score = 0
+    total_micro_precision = 0
+    total_micro_recall = 0
+    total_micro_f1_score = 0
+
+    for fold, (train_indices, test_indices) in enumerate(kf.split(dataset_loader.dataset)):
+
+        train_indices, val_indices = train_test_split(train_indices, test_size=0.15, random_state=42)
+        train_dataset = torch.utils.data.Subset(dataset_loader.dataset, train_indices)
+        val_dataset = torch.utils.data.Subset(dataset_loader.dataset, val_indices)
+        test_dataset = torch.utils.data.Subset(dataset_loader.dataset, test_indices)
+
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
+        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+        test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+        model = Variant1()
+        model.train_model(train_loader, val_loader, num_epochs=num_epochs, save_path_best=f'models/final_best_fold_{fold}', save_path_last=f'models/final_last_fold_{fold}')
+
+        print(f'Fold {fold + 1}/{k_folds}:')
+        best_model = Variant1()
+        best_model.load_model(f'models/final_best_fold_{fold}')
+        test_metrics = evaluate_model(best_model, test_loader, classes)
+
+        total_accuracy += test_metrics["accuracy"]
+        total_macro_precision += test_metrics["precision_macro"]
+        total_macro_recall += test_metrics["recall_macro"]
+        total_macro_f1_score += test_metrics["f1_macro"]
+        total_micro_precision += test_metrics["precision_micro"]
+        total_micro_recall += test_metrics["recall_micro"]
+        total_micro_f1_score += test_metrics["f1_micro"]
+
+    avg_accuracy = total_accuracy / k_folds
+    avg_macro_precision = total_macro_precision / k_folds
+    avg_macro_recall = total_macro_recall / k_folds
+    avg_macro_f1_score = total_macro_f1_score / k_folds
+    avg_micro_precision = total_micro_precision / k_folds
+    avg_micro_recall = total_micro_recall / k_folds
+    avg_micro_f1_score = total_micro_f1_score / k_folds
+
+    print(f'Average across all folds:')
+    print(f'  Accuracy: {avg_accuracy}')
+    print(f'  Macro Precision: {avg_macro_precision}')
+    print(f'  Macro Recall: {avg_macro_recall}')
+    print(f'  Macro F1-score: {avg_macro_f1_score}')
+    print(f'  Micro Precision: {avg_micro_precision}')
+    print(f'  Micro Recall: {avg_micro_recall}')
+    print(f'  Micro F1-score: {avg_micro_f1_score}')
+
 if __name__ == "__main__":
-    dataset_path = 'Dataset'
+    dataset_path = 'Raw_Dataset'
     classes = ['Angry', 'Focused', 'Neutral', 'Surprised']
 
     # create train, val, and test files
@@ -147,19 +203,27 @@ if __name__ == "__main__":
     train_dataset = datasets.ImageFolder('train', transform=transform)
     val_dataset = datasets.ImageFolder('val', transform=transform)
     test_dataset = datasets.ImageFolder('test', transform=transform)
+    dataset = datasets.ImageFolder('Dataset', transform=transform)
 
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+    dataset_loader = DataLoader(dataset, batch_size=32, shuffle=False)
 
-    #initialize and train the model
-    model = MainModel()
-    model.train_model(train_loader, val_loader, save_path_best='best_model_layers2_kernel3x3_v2', save_path_last='last_model_layers2_kernel3x3_v3')
+    #initialize  model
+    model = Variant1()
+
+    #train and save model
+    # model.train_model(train_loader, val_loader, save_path_best='models/best_model_layers2_kernel7x7', save_path_last='models/last_model_layers2_kernel7x7')
     # model.save_model('model_layers2_kernel7x7_v2')
 
+    k_fold(dataset_loader)
+    #evaluate model using k-fold
+
+
     # #load the model for evaluation
-    # loaded_model = MainModel()
-    # loaded_model.load_model('model_layers2_kernel3x3')
+    # loaded_model = Variant2()
+    # loaded_model.load_model('models/best_model_layers2_kernel7x7')
     #
     # loaded_model.inference('test/Angry/images - 2020-11-06T001050.259_face.png', classes)
 
