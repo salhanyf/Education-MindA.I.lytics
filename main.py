@@ -1,3 +1,4 @@
+import argparse
 import shutil
 import matplotlib.pyplot as plt
 import torch
@@ -15,6 +16,9 @@ import os
 from main_model import MainModel
 from variant1 import Variant1
 from variant2 import Variant2
+
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 def split_dataset(dataset_path, train_ratio=0.7, val_ratio=0.15, test_ratio=0.15, random_state=42):
     train_dir = '../Education-MindA.I.lytics/train'
@@ -63,8 +67,9 @@ def evaluate_model(model, data_loader, classes):
     y_pred = []
     with torch.no_grad():
         for images, labels in data_loader:
+            images = images.to(DEVICE)
             outputs = model(images)
-            predicted_classes = torch.argmax(outputs, dim=1)
+            predicted_classes = torch.argmax(outputs, dim=1).cpu()
             y_true.extend(labels.numpy())
             y_pred.extend(predicted_classes.numpy())
 
@@ -77,7 +82,7 @@ def evaluate_model(model, data_loader, classes):
     f1_macro = f1_score(y_true, y_pred, average='macro')
     f1_micro = f1_score(y_true, y_pred, average='micro')
 
-    #plot_confusion_matrix(cm, classes, normalize=True)
+    plot_confusion_matrix(cm, classes, normalize=True)
 
     print("Confusion Matrix:")
     print(cm)
@@ -188,9 +193,33 @@ def k_fold(dataset_loader, num_epochs=10, k_folds=10, batch_size=32):
     print(f'  Micro F1-score: {avg_micro_f1_score}')
 
 if __name__ == "__main__":
-    dataset_path = 'Raw_Dataset'
+    dataset_path = 'Dataset(gender)/other'
     classes = ['Angry', 'Focused', 'Neutral', 'Surprised']
-
+    
+    parser = argparse.ArgumentParser(description = "Description for my parser")
+    parser.add_argument("-d", "--dataset", help = "Example: Dataset argument", required = False, default = "Raw_Dataset")
+    parser.add_argument("-m", "--model", help = "Example: model argument", required = False, default = "Variant2")
+    parser.add_argument("-t", "--train", help = "Example: train argument", required = False, default = "")
+    parser.add_argument("-e", "--evaluate", help = "Example: evaluate argument", required = False, default = "")
+    
+    argument = parser.parse_args()
+    status = False
+    
+    # if argument.Help:
+    #     print("You have used '-H' or '--Help' with argument: {0}".format(argument.Help))
+    #     status = True
+    # if argument.save:
+    #     print("You have used '-s' or '--save' with argument: {0}".format(argument.save))
+    #     status = True
+    # if argument.print:
+    #     print("You have used '-p' or '--print' with argument: {0}".format(argument.print))
+    #     status = True
+    # if argument.output:
+    #     print("You have used '-o' or '--output' with argument: {0}".format(argument.output))
+    #     status = True
+    # if not status:
+    #     print("Maybe you want to use -H or -s or -p or -o as arguments ?")
+        
     # create train, val, and test files
     # train_files, val_files, test_files = split_dataset(dataset_path)
 
@@ -200,34 +229,39 @@ if __name__ == "__main__":
     ])
 
     #create DataLoader objects for train, val, and test sets
-    train_dataset = datasets.ImageFolder('train', transform=transform)
-    val_dataset = datasets.ImageFolder('val', transform=transform)
-    test_dataset = datasets.ImageFolder('test', transform=transform)
-    dataset = datasets.ImageFolder('Dataset', transform=transform)
+    # train_dataset = datasets.ImageFolder('train', transform=transform, DEVICE=DEVICE)
+    # val_dataset = datasets.ImageFolder('val', transform=transform, DEVICE=DEVICE)
+    # test_dataset = datasets.ImageFolder('test', transform=transform, DEVICE=DEVICE)
+    dataset = datasets.ImageFolder(dataset_path, transform)
 
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+    # train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, DEVICE=DEVICE)
+    # val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, DEVICE=DEVICE)
+    # test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, DEVICE=DEVICE)
     dataset_loader = DataLoader(dataset, batch_size=32, shuffle=False)
 
     #initialize  model
-    model = Variant1()
+    # model = Variant1()
 
     #train and save model
     # model.train_model(train_loader, val_loader, save_path_best='models/best_model_layers2_kernel7x7', save_path_last='models/last_model_layers2_kernel7x7')
     # model.save_model('model_layers2_kernel7x7_v2')
 
-    k_fold(dataset_loader)
+    # k_fold(dataset_loader)
     #evaluate model using k-fold
 
 
     # #load the model for evaluation
-    # loaded_model = Variant2()
-    # loaded_model.load_model('models/best_model_layers2_kernel7x7')
+    loaded_model = MainModel()
+    loaded_model.load_model('models/best_model_layers2_kernel3x3')
+    loaded_model.to(DEVICE)
     #
+    # print("-------------------------- Inference test --------------------------")
     # loaded_model.inference('test/Angry/images - 2020-11-06T001050.259_face.png', classes)
 
     #evaluate the loaded model on train, val, and test sets
+    # print("-------------------------- Evaluation train --------------------------")
     # train_metrics = evaluate_model(loaded_model, train_loader, classes)
+    # print("-------------------------- Evaluation val --------------------------")
     # val_metrics = evaluate_model(loaded_model, val_loader, classes)
-    # test_metrics = evaluate_model(loaded_model, test_loader, classes)
+    print("-------------------------- Evaluation test --------------------------")
+    test_metrics = evaluate_model(loaded_model, dataset_loader, classes)
